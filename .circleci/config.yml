@@ -1,40 +1,205 @@
+defaults: &defaults
+  #working_directory: ./circleci
+  docker:
+    - image: circleci/node:8
+
 version: 2
 jobs:
-  one:
-    docker:
-      - image: circleci/ruby:2.4.1
+  prepare:
+    <<: *defaults
     steps:
       - checkout
-      - run: echo "A first hello"
-      - run: mkdir -p my_workspace
-      - run: echo "Trying out workspaces" > my_workspace/echo-output
-      - persist_to_workspace:
-          # Must be an absolute path, or relative path from working_directory
-          root: my_workspace
-          # Must be relative path from root
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "package.json" }}
+      - run: npm install
+      - save_cache:
           paths:
-            - echo-output      
-  two:
-    docker:
-      - image: circleci/ruby:2.4.1
+            - node_modules
+          key: v1-dependencies-{{ checksum "package.json" }}
+      - persist_to_workspace:
+          root: .
+          paths:
+            - node_modules
+  build:
+    <<: *defaults
     steps:
       - checkout
-      - run: echo "A more familiar hi"  
       - attach_workspace:
-          # Must be absolute path or relative path from working_directory
-          at: my_workspace
+          at: .
+      - run: npm run build
+      - persist_to_workspace:
+          root: .
+          paths:
+            - build
+  tu:
+    <<: *defaults
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run: npm run test
+  e2e:
+    <<: *defaults
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run: npm run test
+  lint:
+    <<: *defaults
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run: npm run lint
+  deploy-github:
+    <<: *defaults
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - deploy:
+          name: Deploy to GitHub Pages
+          command: |
+              set -e
 
-      - run: |
-          if [[ $(cat my_workspace/echo-output) == "Trying out workspaces" ]]; then
-            echo "It worked!";
-          else
-            echo "Nope!"; exit 1
-          fi
+              remote=$(git config remote.origin.url)
+
+              if [ ! -d "build" ]
+              then
+                  echo "build folder not found"
+                  exit 1
+              fi
+
+              # mkdir gh-pages-branch
+              # cd gh-pages-branch
+              # git config --global user.email "$GH_EMAIL" > /dev/null 2>&1
+              # git config --global user.name "$GH_NAME" > /dev/null 2>&1
+              # git init
+              # git remote add --fetch origin "$remote"
+
+              # if git rev-parse --verify origin/gh-pages > /dev/null 2>&1
+              # then
+              #     git checkout gh-pages
+              #     git rm -rf .
+              # else
+              #     git checkout --orphan gh-pages
+              # fi
+
+              # cp -a "../build/." .
+
+              # git add -A
+              # git commit --allow-empty -m "Deploy to GitHub pages [ci skip]"
+              # git push --force --quiet origin gh-pages > /dev/null 2>&1
+
+              # cd ..
+              # rm -rf gh-pages-branch
+
+              echo "Finished GitHub pages Deployment!"
+
+  deploy-prod:
+    <<: *defaults
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - deploy:
+          name: Deploy to Production
+          command: |
+              echo "iooooooo"
+
+
 workflows:
   version: 2
-  one_and_two:
+  build_accept_deploy:
     jobs:
-      - one
-      - two:
+      - prepare
+      - lint:
           requires:
-            - one
+            - prepare
+      - build:
+          requires:
+            - lint
+      - tu:
+          requires:
+            - build
+      - e2e:
+          requires:
+            - build
+      - deploy-github:
+          requires:
+            - tu
+            - e2e
+      - deploy-prod:
+          type: approval
+          requires:
+            - tu
+            - e2e
+
+
+# version: 2
+# jobs:
+#   build:
+#     branches:
+#       ignore:
+#         - gh-pages
+#     docker:
+#       - image: circleci/node:8
+#     working_directory: ~/repo
+#     steps:
+#       - checkout
+#       - restore_cache:
+#           keys:
+#           - dependencies-{{ checksum "package.json" }}
+#           - dependencies-
+#       - run:
+#           name: Install dependencies
+#           command: npm install
+#       - save_cache:
+#           paths:
+#             - node_modules
+#           key: dependencies-{{ checksum "package.json" }}
+#       - deploy:
+#           name: Deploy
+#           command: |
+#               set -e
+#               npm install
+#               CI="" npm run build
+
+#               remote=$(git config remote.origin.url)
+
+#               siteSource="build"
+
+#               if [ ! -d "build" ]
+#               then
+#                   echo "Usage: $0 <site source dir>"
+#                   exit 1
+#               fi
+
+#               mkdir gh-pages-branch
+#               cd gh-pages-branch
+#               git config --global user.email "$GH_EMAIL" > /dev/null 2>&1
+#               git config --global user.name "$GH_NAME" > /dev/null 2>&1
+#               git init
+#               git remote add --fetch origin "$remote"
+
+#               if git rev-parse --verify origin/gh-pages > /dev/null 2>&1
+#               then
+#                   git checkout gh-pages
+#                   git rm -rf .
+#               else
+#                   git checkout --orphan gh-pages
+#               fi
+
+#               cp -a "../build/." .
+
+#               git add -A
+#               git commit --allow-empty -m "Deploy to GitHub pages [ci skip]"
+#               git push --force --quiet origin gh-pages > /dev/null 2>&1
+
+#               cd ..
+#               rm -rf gh-pages-branch
+
+#               echo "Finished Deployment!"
