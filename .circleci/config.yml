@@ -33,7 +33,7 @@ jobs:
           root: .
           paths:
             - build
-  e2e:
+  test:
     <<: *defaults
     steps:
       - checkout
@@ -70,13 +70,13 @@ workflows:
       - build:
           requires:
             - lint
-      - e2e:
+      - test:
           requires:
             - build
       - deploy-dev:
           type: approval
           requires:
-            - e2e
+            - test
           filters:
             tags:
               ignore: /.*/

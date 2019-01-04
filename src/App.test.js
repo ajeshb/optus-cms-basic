@@ -8,6 +8,6 @@ it('renders without crashing', () => {
   ReactDOM.unmountComponentAtNode(div);
 });
 
-test('there is no I in team', () => {
-  expect('team').toMatch(/I/);
+it('there is no I in team', () => {
+  expect('team').not.toMatch(/I/);
 });
