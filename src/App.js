@@ -3,7 +3,6 @@ import './App.scss';
 
 class App extends Component {
   render() {
-    const ajesh = "helo";
     return (
         <div className="App">
           Optus CMS
