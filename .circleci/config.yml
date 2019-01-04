@@ -67,12 +67,13 @@ workflows:
       - lint:
           requires:
             - prepare
-      - build:
-          requires:
-            - lint
       - test:
           requires:
-            - build
+            - prepare
+      - build:
+          requires:
+            - test
+            - lint
       - deploy-dev:
           type: approval
           requires:
