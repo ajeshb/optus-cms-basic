@@ -11,3 +11,13 @@ it('renders without crashing', () => {
 it('there is no I in team', () => {
   expect('team').not.toMatch(/I/);
 });
+
+describe('Google', () => {
+  beforeAll(async () => {
+    await page.goto('https://google.com')
+  })
+
+  it('should display "google" text on page', async () => {
+    await expect(page).toMatch('google')
+  })
+})
