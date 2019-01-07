@@ -56,7 +56,7 @@ jobs:
       - deploy:
           name: Deploy to Dev env
           command: |
-              echo "iooooooo"
+              echo "deploy code "
 
 
 workflows:
